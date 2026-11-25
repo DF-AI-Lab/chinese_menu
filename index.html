@@ -51,11 +51,35 @@ h2{font:700 24px/1.1 Outfit,sans-serif;color:var(--red);margin:0 0 4px}
 .sv{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:10px 0;border-bottom:1px dashed var(--line)}
 .sv small{display:block;color:var(--soft)}
 .sv .del{background:var(--chip);color:var(--ink)}
+button,a{touch-action:manipulation}
+.brand{display:flex;align-items:center;gap:12px}
+.brand svg{width:clamp(70px,11vw,96px);height:auto;flex:none}
+.cats .home{display:flex;align-items:center;gap:6px;background:var(--green);color:#fff}
+.cats .home svg{width:16px;height:16px}
+.unit{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin-top:6px;font-size:14px}
+.unit .n{color:var(--soft);width:22px}
+.unit label{margin:0}
+.share{margin-top:10px;margin-left:6px}
+#qr{margin-top:12px;text-align:center}
+#qr .box{display:inline-block;padding:10px;background:#fff;border-radius:10px}
+#qr p{font-size:13px;color:var(--soft);margin:6px 0 0}
 .bar{position:fixed;left:0;right:0;bottom:0;background:var(--red);color:#fff;display:flex;justify-content:space-between;align-items:center;padding-block:14px calc(14px + env(safe-area-inset-bottom,0px));font:700 20px Outfit,sans-serif;z-index:9;text-decoration:none}
 </style>
 
 <header class="pad">
-  <h1>Chop Suey House</h1>
+  <div class="brand">
+    <svg viewBox="0 0 120 100" aria-hidden="true">
+      <path d="M8 70c10-18 26-20 36-8s24 14 34-4 4-34 20-40c-6 10-2 18 6 20" fill="none" stroke="#c3261c" stroke-width="11" stroke-linecap="round"/>
+      <path d="M8 70c10-18 26-20 36-8s24 14 34-4 4-34 20-40" fill="none" stroke="#f5c542" stroke-width="3" stroke-dasharray="3 6" stroke-linecap="round"/>
+      <path d="M20 56l-2-10 8 6M40 56l2-11 6 9M64 58l6-9 2 10M80 40l8-6-1 10" fill="#f5c542"/>
+      <path d="M92 10c8-6 20-4 24 4 3 7-2 14-10 14l-14-2c-6-1-8-12 0-16z" fill="#c3261c"/>
+      <path d="M96 8l-4-8 8 5M104 6l2-6 3 7" fill="#f5c542"/>
+      <circle cx="106" cy="14" r="2.6" fill="#fff"/><circle cx="106.5" cy="14" r="1.3" fill="#111"/>
+      <path d="M114 22c4 6 2 12-4 14M110 26c0 6-4 9-9 9" fill="none" stroke="#f5c542" stroke-width="2" stroke-linecap="round"/>
+      <path d="M8 70l-6 8 10-2z" fill="#c3261c"/>
+    </svg>
+    <h1>Chop Suey House</h1>
+  </div>
   <p>Ring <b>01904 627767</b> · Cash &amp; pick-up only · 5pm–11pm, closed Tuesdays</p>
   <input id="q" class="search" type="search" placeholder="Search the menu…">
 </header>
@@ -67,7 +91,8 @@ h2{font:700 24px/1.1 Outfit,sans-serif;color:var(--red);margin:0 0 4px}
     <div id="lines"></div>
     <div class="total"><span>Total</span><span id="tot">£0.00</span></div>
     <div class="info">Ring it through on<br><b>01904 627767</b><br>Prices from the shop menu. Cash only.</div>
-    <button class="clear" id="clr">Clear order</button>
+    <button class="clear" id="clr">Clear order</button><button class="clear share" id="shr">Share as QR</button>
+    <div id="qr" hidden></div>
     <form id="saveForm" class="saveRow">
       <input id="sname" type="text" placeholder="Name this order, e.g. Friday tea">
       <button type="submit">Save</button>
@@ -79,6 +104,7 @@ h2{font:700 24px/1.1 Outfit,sans-serif;color:var(--red);margin:0 0 4px}
 </div>
 <a class="bar pad" href="#order"><span id="bcount">0 items</span><span id="btot">£0.00</span></a>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 {
 const SIDE=[["Boiled rice",0],["Chips",0],["Egg fried rice",1],["Noodles",1.2]];
@@ -99,15 +125,23 @@ const M=[
 ];
 const ITEMS={};M.forEach(([c,n,t,list])=>list.forEach(([id,name,p])=>ITEMS[id]={id,name,p,t}));
 const gbp=v=>"£"+v.toFixed(2);
-const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;");
+const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
 const slug=c=>c.replace(/\W+/g,"");
-let order=[];try{order=JSON.parse(localStorage.getItem("csh-order"))||[]}catch(e){}
-const save=()=>{try{localStorage.setItem("csh-order",JSON.stringify(order))}catch(e){}};
+const SITE="https://df-ai-lab.github.io/chinese_menu/";
 const $=id=>document.getElementById(id);
-$("cats").innerHTML=M.map(([c])=>`<a href="#${slug(c)}">${esc(c)}</a>`).join("");
+/* a line is {id, u:[{s,b}...]}: one entry per portion, so each gets its own side */
+const norm=list=>(list||[]).filter(o=>o&&ITEMS[o.id]).map(o=>o.u?o:{id:o.id,u:Array.from({length:o.n||1},()=>({s:o.side||0,b:!!o.big}))});
+let order=[];try{order=norm(JSON.parse(localStorage.getItem("csh-order")))}catch(e){}
+const save=()=>{try{localStorage.setItem("csh-order",JSON.stringify(order))}catch(e){}};
+const count=l=>l.reduce((a,o)=>a+o.u.length,0);
+const unitP=(it,x)=>it.p+(it.t?SIDE[x.s][1]:0)+(it.t==2&&x.b?2:0);
+const lineP=o=>{const it=ITEMS[o.id];return o.u.reduce((a,x)=>a+unitP(it,x),0)};
+const total=l=>l.reduce((a,o)=>a+lineP(o),0);
+$("cats").innerHTML=`<a href="#top" class="home" id="home"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3z"/></svg>Home</a>`+M.map(([c])=>`<a href="#${slug(c)}">${esc(c)}</a>`).join("");
+document.querySelector("header").id="top";
 function drawMenu(){
   const f=$("q").value.trim().toLowerCase();
-  const cnt={};order.forEach(o=>cnt[o.id]=(cnt[o.id]||0)+o.n);
+  const cnt={};order.forEach(o=>cnt[o.id]=(cnt[o.id]||0)+o.u.length);
   $("menu").innerHTML=M.map(([c,n,t,list])=>{
     const l=list.filter(([id,name])=>!f||name.toLowerCase().includes(f)||id.toLowerCase()==f);
     if(!l.length)return"";
@@ -115,30 +149,43 @@ function drawMenu(){
     l.map(([id,name,p])=>`<div class="item"><span class="num">${id}</span><span>${esc(name)}${cnt[id]?`<span class="q">${cnt[id]}</span>`:""}</span><span class="price">${gbp(p)}</span><button class="add" data-id="${id}" aria-label="Add ${esc(name)}">+</button></div>`).join("")+`</section>`;
   }).join("")||`<p class="empty">Nothing matches that.</p>`;
 }
-const lineP=o=>{const it=ITEMS[o.id];return (it.p+(it.t?SIDE[o.side][1]:0)+(o.big?2:0))*o.n};
 function drawOrder(){
-  $("lines").innerHTML=order.length?order.map((o,i)=>{const it=ITEMS[o.id];return `<div class="line"><div><div class="nm">${o.n}× ${esc(it.name)}</div>${it.t?`<select data-i="${i}" class="side">${SIDE.map(([s,x],k)=>`<option value="${k}"${k==o.side?" selected":""}>${s}${x?` +${gbp(x)}`:""}</option>`).join("")}</select>`:""}${it.t==2?`<label><input type="checkbox" class="big" data-i="${i}"${o.big?" checked":""}> Large +£2.00</label>`:""}</div><div><div class="price" style="text-align:right">${gbp(lineP(o))}</div><div class="qty"><button data-i="${i}" data-d="-1" aria-label="Less">−</button><button data-i="${i}" data-d="1" aria-label="More">+</button></div></div></div>`}).join(""):`<p class="empty">Tap + on anything to add it.</p>`;
-  const tot=order.reduce((s,o)=>s+lineP(o),0),n=order.reduce((s,o)=>s+o.n,0);
+  $("lines").innerHTML=order.length?order.map((o,i)=>{const it=ITEMS[o.id];
+    const units=it.t?o.u.map((x,k)=>`<div class="unit">${o.u.length>1?`<span class="n">${k+1}.</span>`:""}<select data-i="${i}" data-k="${k}" class="side" aria-label="Side">${SIDE.map(([s,v],j)=>`<option value="${j}"${j==x.s?" selected":""}>${s}${v?` +${gbp(v)}`:""}</option>`).join("")}</select>${it.t==2?`<label><input type="checkbox" class="big" data-i="${i}" data-k="${k}"${x.b?" checked":""}> Large +£2</label>`:""}</div>`).join(""):"";
+    return `<div class="line"><div><div class="nm">${o.u.length}× ${esc(it.name)}</div>${units}</div><div><div class="price" style="text-align:right">${gbp(lineP(o))}</div><div class="qty"><button data-i="${i}" data-d="-1" aria-label="Less">−</button><button data-i="${i}" data-d="1" aria-label="More">+</button></div></div></div>`}).join(""):`<p class="empty">Tap + on anything to add it.</p>`;
+  const tot=total(order),n=count(order);
   $("tot").textContent=gbp(tot);$("btot").textContent=gbp(tot);$("bcount").textContent=n+(n==1?" item":" items")+" · view order";
-  save();drawMenu();
+  $("qr").hidden=true;save();drawMenu();
 }
+function add(id){const ex=order.find(o=>o.id==id);ex?ex.u.push({s:0,b:false}):order.push({id,u:[{s:0,b:false}]})}
 document.addEventListener("click",e=>{
   const a=e.target.closest(".add");
-  if(a){const id=a.dataset.id,ex=order.find(o=>o.id==id&&!o.side&&!o.big);ex?ex.n++:order.push({id,n:1,side:0,big:false});drawOrder();return}
+  if(a){add(a.dataset.id);const q=$("q");if(q.value){q.value="";q.blur()}drawOrder();return}
   const q=e.target.closest(".qty button");
-  if(q){const o=order[q.dataset.i];o.n+=+q.dataset.d;if(o.n<1)order.splice(q.dataset.i,1);drawOrder()}
+  if(q){const o=order[q.dataset.i];if(+q.dataset.d>0)o.u.push({...o.u[o.u.length-1]});else o.u.pop();if(!o.u.length)order.splice(q.dataset.i,1);drawOrder()}
 });
 document.addEventListener("change",e=>{
-  const t=e.target;if(t.classList.contains("side"))order[t.dataset.i].side=+t.value;
-  if(t.classList.contains("big"))order[t.dataset.i].big=t.checked;drawOrder();
+  const t=e.target,i=t.dataset.i,k=t.dataset.k;if(i==null||k==null)return;
+  if(t.classList.contains("side"))order[i].u[k].s=+t.value;
+  if(t.classList.contains("big"))order[i].u[k].b=t.checked;drawOrder();
 });
+$("home").addEventListener("click",e=>{e.preventDefault();$("q").value="";drawMenu();window.scrollTo({top:0,behavior:"smooth"})});
 $("q").addEventListener("input",drawMenu);
 $("clr").addEventListener("click",()=>{order=[];drawOrder()});
-let saved=[];try{saved=JSON.parse(localStorage.getItem("csh-saved"))||[]}catch(e){}
-const total=o=>o.reduce((s,x)=>s+(ITEMS[x.id]?lineP(x):0),0);
+/* share: order packed into the link, e.g. #o-19a_03L-7_0 */
+const pack=l=>"o-"+l.map(o=>o.id+"_"+o.u.map(x=>x.s+(x.b?"L":"")).join("")).join("-");
+function unpack(h){const out=[];h.replace(/^#?o-/,"").split("-").forEach(p=>{const [id,c]=p.split("_");if(!ITEMS[id])return;const u=[];(c||"0").replace(/([0-3])(L?)/g,(m,s,b)=>u.push({s:+s,b:!!b}));if(u.length)out.push({id,u})});return out}
+$("shr").addEventListener("click",()=>{
+  const box=$("qr");
+  if(!order.length){box.hidden=false;box.innerHTML=`<p>Add something first.</p>`;return}
+  if(!box.hidden){box.hidden=true;return}
+  const url=SITE+"#"+pack(order);box.hidden=false;box.innerHTML=`<div class="box" id="qrc"></div><p>Scan to open this order (${count(order)} items, ${gbp(total(order))})</p>`;
+  try{new QRCode($("qrc"),{text:url,width:170,height:170,correctLevel:QRCode.CorrectLevel.L})}catch(err){box.innerHTML=`<p>Couldn’t make the QR code. Link:<br>${esc(url)}</p>`}
+});
+let saved=[];try{saved=(JSON.parse(localStorage.getItem("csh-saved"))||[]).map(s=>({...s,items:norm(s.items)}))}catch(e){}
 function drawSaved(){
   try{localStorage.setItem("csh-saved",JSON.stringify(saved))}catch(e){}
-  $("saved").innerHTML=saved.length?saved.map((s,i)=>`<div class="sv"><div><b>${esc(s.name)}</b><small>${s.items.reduce((a,x)=>a+x.n,0)} items · ${gbp(total(s.items))} · ${esc(s.date)}</small></div><button data-load="${i}">Load</button><button class="del" data-del="${i}" aria-label="Delete">✕</button></div>`).join(""):`<p class="empty">No saved orders yet.</p>`;
+  $("saved").innerHTML=saved.length?saved.map((s,i)=>`<div class="sv"><div><b>${esc(s.name)}</b><small>${count(s.items)} items · ${gbp(total(s.items))} · ${esc(s.date)}</small></div><button data-load="${i}">Load</button><button class="del" data-del="${i}" aria-label="Delete">✕</button></div>`).join(""):`<p class="empty">No saved orders yet.</p>`;
 }
 $("saveForm").addEventListener("submit",e=>{
   e.preventDefault();
@@ -149,9 +196,10 @@ $("saveForm").addEventListener("submit",e=>{
 });
 $("saved").addEventListener("click",e=>{
   const l=e.target.dataset.load,d=e.target.dataset.del;
-  if(l!=null){order=JSON.parse(JSON.stringify(saved[l].items)).filter(x=>ITEMS[x.id]);$("smsg").textContent="Loaded “"+saved[l].name+"”.";drawOrder()}
+  if(l!=null){order=JSON.parse(JSON.stringify(saved[l].items));$("smsg").textContent="Loaded “"+saved[l].name+"”.";drawOrder()}
   if(d!=null){if(e.target.dataset.sure){saved.splice(d,1);$("smsg").textContent="";drawSaved()}else{e.target.dataset.sure=1;e.target.textContent="Sure?"}}
 });
+if(/^#o-/.test(location.hash)){const got=unpack(location.hash);if(got.length){order=got;$("smsg").textContent="Order opened from a shared QR code."}try{history.replaceState(null,"",location.pathname)}catch(e){}}
 drawSaved();
 drawOrder();
 }
