@@ -98,7 +98,7 @@ button,a{touch-action:manipulation}
       <button type="submit">Save</button>
     </form>
     <p id="smsg" class="empty"></p>
-    <h2 style="margin-top:18px">Saved orders</h2>
+    <h2 style="margin-top:18px;scroll-margin-top:70px" id="mine">Saved orders</h2>
     <div id="saved"></div>
   </aside>
 </div>
@@ -137,7 +137,7 @@ const count=l=>l.reduce((a,o)=>a+o.u.length,0);
 const unitP=(it,x)=>it.p+(it.t?SIDE[x.s][1]:0)+(it.t==2&&x.b?2:0);
 const lineP=o=>{const it=ITEMS[o.id];return o.u.reduce((a,x)=>a+unitP(it,x),0)};
 const total=l=>l.reduce((a,o)=>a+lineP(o),0);
-$("cats").innerHTML=`<a href="#top" class="home" id="home"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3z"/></svg>Home</a>`+M.map(([c])=>`<a href="#${slug(c)}">${esc(c)}</a>`).join("");
+$("cats").innerHTML=`<a href="#top" class="home" id="home"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3z"/></svg>Home</a><a href="#mine" class="home">My orders</a>`+M.map(([c])=>`<a href="#${slug(c)}">${esc(c)}</a>`).join("");
 document.querySelector("header").id="top";
 function drawMenu(){
   const f=$("q").value.trim().toLowerCase();
@@ -185,7 +185,7 @@ $("shr").addEventListener("click",()=>{
 let saved=[];try{saved=(JSON.parse(localStorage.getItem("csh-saved"))||[]).map(s=>({...s,items:norm(s.items)}))}catch(e){}
 function drawSaved(){
   try{localStorage.setItem("csh-saved",JSON.stringify(saved))}catch(e){}
-  $("saved").innerHTML=saved.length?saved.map((s,i)=>`<div class="sv"><div><b>${esc(s.name)}</b><small>${count(s.items)} items · ${gbp(total(s.items))} · ${esc(s.date)}</small></div><button data-load="${i}">Load</button><button class="del" data-del="${i}" aria-label="Delete">✕</button></div>`).join(""):`<p class="empty">No saved orders yet.</p>`;
+  $("saved").innerHTML=saved.length?saved.map((s,i)=>`<div class="sv"><div><b>${esc(s.name)}</b><small>${count(s.items)} items · ${gbp(total(s.items))} · ${esc(s.date)}</small></div><button data-load="${i}">Reorder</button><button class="del" data-del="${i}" aria-label="Delete">✕</button></div>`).join(""):`<p class="empty">No saved orders yet.</p>`;
 }
 $("saveForm").addEventListener("submit",e=>{
   e.preventDefault();
