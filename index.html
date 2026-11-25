@@ -1,0 +1,126 @@
+<title>Chop Suey House Order</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* VOICE everyday: quick takeaway order
+   IDEA the laminated takeaway menu on the wall, with a running ticket
+   PICTURE the order ticket itself, always in view
+   COLOUR bamboo green ground band, red lettering, white paper
+   TYPE Outfit + Inter
+   LAYOUT laptop: menu left, sticky ticket right; phone: menu then slim sticky total bar */
+:root{color-scheme:light dark;--bg:light-dark(#f4f8ef,#0f1a10);--paper:light-dark(#fff,#18261a);--ink:light-dark(#14210f,#e8f1e3);--soft:light-dark(#5b6b55,#9fb398);--line:light-dark(#dbe5d3,#2a3d2c);--green:light-dark(#2f8a2a,#5cc153);--red:light-dark(#c3261c,#ff6a5c);--chip:light-dark(#e8f3e2,#203423)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 Inter,system-ui,sans-serif;overflow-x:clip;margin:0}
+.pad{padding-left:max(4vw,16px,env(safe-area-inset-left,0px));padding-right:max(4vw,16px,env(safe-area-inset-right,0px))}
+header{background:var(--green);color:#fff;padding-block:22px 18px;margin-top:calc(-1*env(safe-area-inset-top,0px));padding-top:calc(env(safe-area-inset-top,0px) + 22px)}
+header h1{font:700 clamp(30px,5vw,44px)/1.05 Outfit,sans-serif;margin:0;letter-spacing:-.02em}
+header p{margin:6px 0 0;font-size:15px}
+header b{white-space:nowrap}
+.search{margin-top:14px;width:100%;max-width:420px;font:16px Inter,sans-serif;padding:10px 14px;border-radius:10px;border:0}
+.cats{display:flex;gap:8px;overflow-x:auto;padding-block:12px;position:sticky;top:0;background:var(--bg);z-index:5;border-bottom:1px solid var(--line)}
+.cats a{flex:none;padding:7px 12px;border-radius:999px;background:var(--chip);color:var(--ink);text-decoration:none;font-size:14px;font-weight:600}
+.wrap{display:grid;gap:24px;padding-block:20px 120px;max-width:1240px;margin:auto}
+@media(min-width:900px){.wrap{grid-template-columns:minmax(0,1fr) 360px}.bar{display:none}}
+section{margin-bottom:26px;scroll-margin-top:64px}
+h2{font:700 24px/1.1 Outfit,sans-serif;color:var(--red);margin:0 0 4px}
+.note{color:var(--soft);font-size:14px;margin:0 0 8px}
+.item{display:grid;grid-template-columns:44px minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:10px 12px;background:var(--paper);border:1px solid var(--line);border-radius:10px;margin-bottom:6px}
+.num{color:var(--soft);font-size:13px}
+.price{font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums}
+.add{width:44px;height:44px;border-radius:10px;border:0;background:var(--green);color:#fff;font:700 22px Outfit,sans-serif;cursor:pointer}
+.add:active{transform:scale(.94)}
+.q{display:inline-block;min-width:22px;text-align:center;background:var(--red);color:#fff;border-radius:999px;font-size:12px;font-weight:700;margin-left:6px;padding:1px 6px}
+.ticket{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:18px;align-self:start;position:sticky;top:70px}
+.ticket h2{color:var(--ink)}
+.line{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;padding:10px 0;border-bottom:1px dashed var(--line)}
+.line .nm{font-weight:600}
+.line select{font:14px Inter,sans-serif;padding:4px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);margin-top:4px;max-width:100%}
+.line label{font-size:14px;display:flex;gap:6px;align-items:center;margin-top:4px}
+.qty{display:flex;gap:6px;align-items:center;justify-content:flex-end}
+.qty button{width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:var(--chip);color:var(--ink);font-size:18px;cursor:pointer}
+.total{display:flex;justify-content:space-between;font:700 30px Outfit,sans-serif;margin-top:14px}
+.empty{color:var(--soft)}
+.info{font-size:14px;color:var(--soft);margin-top:12px}
+.info b{color:var(--ink);font-size:18px;white-space:nowrap}
+.clear{margin-top:10px;background:none;border:1px solid var(--line);color:var(--soft);border-radius:8px;padding:8px 12px;cursor:pointer;font:14px Inter,sans-serif}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--red);color:#fff;display:flex;justify-content:space-between;align-items:center;padding-block:14px calc(14px + env(safe-area-inset-bottom,0px));font:700 20px Outfit,sans-serif;z-index:9;text-decoration:none}
+</style>
+
+<header class="pad">
+  <h1>Chop Suey House</h1>
+  <p>Ring <b>01904 627767</b> · Cash &amp; pick-up only · 5pm–11pm, closed Tuesdays</p>
+  <input id="q" class="search" type="search" placeholder="Search the menu…">
+</header>
+<nav class="cats pad" id="cats"></nav>
+<div class="wrap pad">
+  <main id="menu"></main>
+  <aside class="ticket" id="order">
+    <h2>Your order</h2>
+    <div id="lines"></div>
+    <div class="total"><span>Total</span><span id="tot">£0.00</span></div>
+    <div class="info">Ring it through on<br><b>01904 627767</b><br>Prices from the shop menu. Cash only.</div>
+    <button class="clear" id="clr">Clear order</button>
+  </aside>
+</div>
+<a class="bar pad" href="#order"><span id="bcount">0 items</span><span id="btot">£0.00</span></a>
+
+<script>
+{
+const SIDE=[["Boiled rice",0],["Chips",0],["Egg fried rice",1],["Noodles",1.2]];
+const M=[
+["Starters","",0,[["S1","Chicken Sweetcorn Soup",4],["S2","Prawn Toast",5],["S3","Salt & Pepper Chicken Wings",5.8],["S4","Pancake Roll",2.9],["S5","Vegetarian Spring Roll (3)",2.9],["S6","Mini Spring Roll (3)",2.9],["S7","Prawn Crackers",2.5],["S7v","Vietnamese Prawn Crackers",2.7],["S8","Barbecued Ribs (dry, no sauce)",7]]],
+["Side Dishes","",0,[["E1","Curry or Gravy Sauce",2.5],["E2","Sweet & Sour Sauce",2.5],["E3","Boiled Rice",3],["E4","Egg Fried Rice",3.7],["E5","Fried Soft Noodles",3.7],["E6","Fried Bean Sprouts",3.7],["E7","Stir Fried Mushrooms",3.7],["E8","Bamboo Shoots & Water Chestnuts",3.9],["E9","Fried Mixed Vegetables",3.7],["E10","Stir Fried Onion",3.7],["E11","Chow Mein",3.7],["E12","Pot of Cashew Nuts",3.4],["E16","Chips",3]]],
+["Chow Mein","Noodles with bean sprouts",0,[["1","King Prawn Chow Mein",8.8],["2","Prawn Chow Mein",8.8],["3","Chicken Chow Mein",8],["4","Pork Chow Mein",8],["5","Beef Chow Mein",8.2],["6","Special Chow Mein",8.3],["6a","Char Siu Chow Mein",8],["6b","Vegetable Chow Mein",7.8],["6c","Mushroom Chow Mein",7.8]]],
+["Curry","Boiled rice or chips included. Large +£2.00",2,[["7","King Prawn Curry",8.8],["8","Prawn Curry",8.8],["9","Pork Curry",8],["10","Beef Curry",8.2],["11","Chicken Curry",8],["11a","Vegetable Curry",7.8],["11b","Mushroom Curry",7.8],["11c","Char Siu Curry",8],["11d","Special Curry",8.3]]],
+["Fried Rice","",0,[["12","King Prawn Fried Rice",8.8],["13","Prawn Fried Rice",8.8],["14","Chicken Fried Rice",8],["15","Yung Chow Fried Rice (Special)",8.3],["15a","Char Siu Fried Rice",8],["15b","Beef Fried Rice",8.2],["15c","Mushroom Fried Rice",7.8],["15d","Singapore Fried Rice",8.3],["15e","Vegetable Fried Rice",7.8]]],
+["Foo Yung","Boiled rice or chips included",1,[["16","King Prawn Foo Yung",8.8],["17","Prawn Foo Yung",8.8],["18","Chicken Foo Yung",8],["18a","Mushroom Foo Yung",7.8],["18b","Char Siu Foo Yung",8],["18c","Special Foo Yung",8.3]]],
+["Sweet & Sour","Boiled rice or chips included",1,[["19","Sweet & Sour Chicken Balls",8],["19a","Sweet & Sour Chicken Cantonese Style",8],["20","Sweet & Sour Pork Balls",8],["21","Sweet & Sour King Prawn Balls",8.8]]],
+["Mushroom","Boiled rice or chips included",1,[["22","King Prawn with Mushrooms",8.8],["23","Prawn with Mushrooms",8.8],["24","Beef with Mushrooms",8.2],["25","Chicken with Mushrooms",8],["26","Pork with Mushrooms",8],["26a","Char Siu with Mushrooms",8]]],
+["Chop Suey","Boiled rice or chips included",1,[["27","King Prawn Chop Suey",8.8],["28","Prawn Chop Suey",8.8],["29","Chicken Chop Suey",8],["30","Pork Chop Suey",8],["31","Beef Chop Suey",8.2],["32","Special Chop Suey",8.3],["32a","Vegetable Chop Suey",7.8]]],
+["Satay","",0,[["33","King Prawn Satay",8.8],["34","Prawn Satay",8.8],["35","Chicken Satay",8],["36","Pork Satay",8],["37","Beef Satay",8.2],["37a","Special Satay",8.3],["37b","Vegetable Satay",7.8]]],
+["English","",0,[["38","Prawn Omelette with Chips",8.8],["39","Chicken Omelette with Chips",7.8],["40","Spanish Omelette with Chips",7.8],["41","Ham Omelette with Chips",7.8],["42","Mushroom Omelette with Chips",7.8],["42a","Plain Omelette with Chips",7.3],["43","Chicken Breast with Chips",7.8]]],
+["Chef's Specials","",0,[["48","King Prawn with Ginger & Spring Onions",8.8],["49","Chicken with Ginger & Spring Onions",7.8],["50","Beef with Ginger & Spring Onions",8],["51","Singapore Vermicelli",8.3],["52","Salt & Pepper Chicken",7.8],["53","Lemon Chicken",7.8],["54","King Prawn with Oyster Sauce",8.8],["55","Chicken with Oyster Sauce",7.8],["56","Beef with Oyster Sauce",8],["57","King Prawn Green Peppers in Black Bean",8.8],["58","Chicken Green Peppers in Black Bean",7.8],["59","Beef Green Peppers in Black Bean",8],["60","King Prawn with Cashew Nuts",8.8],["61","Chicken with Cashew Nuts",7.8],["62","Beef with Cashew Nuts",8],["63","King Prawn with Tomatoes",8.8],["64","Chicken with Tomatoes",7.8],["65","Beef with Tomatoes",8],["66","King Prawn with Pineapple",8.8],["67","Chicken with Pineapple",7.8],["68","Beef with Pineapple",8],["69","Sliced Chicken with Bean Sprouts",7.8],["69a","Sliced Chicken with Soft Noodles",7.8],["70","Sliced Chicken & Char Siu with Bean Sprouts",7.8],["70a","Sliced Chicken & Char Siu with Soft Noodles",7.8],["71","King Prawn in Black Pepper Sauce",8.8],["72","Chicken in Black Pepper Sauce",7.8],["73","Beef in Black Pepper Sauce",8]]],
+["Set Meals","",0,[["A","Set A for 2: S&S Chicken, Beef Mushroom, Yung Chow Rice, Mini Rolls",23],["B","Set B for 2: Chicken Curry, Char Siu Foo Yung, Beef Black Bean, Chicken Rice, Crackers",27],["C","Set C for 4: Curry, Prawn Foo Yung, S&S Pork, Beef Black Bean, Satay, 2 Rice, 2 Crackers, Veg",52]]]
+];
+const ITEMS={};M.forEach(([c,n,t,list])=>list.forEach(([id,name,p])=>ITEMS[id]={id,name,p,t}));
+const gbp=v=>"£"+v.toFixed(2);
+const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;");
+const slug=c=>c.replace(/\W+/g,"");
+let order=[];try{order=JSON.parse(localStorage.getItem("csh-order"))||[]}catch(e){}
+const save=()=>{try{localStorage.setItem("csh-order",JSON.stringify(order))}catch(e){}};
+const $=id=>document.getElementById(id);
+$("cats").innerHTML=M.map(([c])=>`<a href="#${slug(c)}">${esc(c)}</a>`).join("");
+function drawMenu(){
+  const f=$("q").value.trim().toLowerCase();
+  const cnt={};order.forEach(o=>cnt[o.id]=(cnt[o.id]||0)+o.n);
+  $("menu").innerHTML=M.map(([c,n,t,list])=>{
+    const l=list.filter(([id,name])=>!f||name.toLowerCase().includes(f)||id.toLowerCase()==f);
+    if(!l.length)return"";
+    return `<section id="${slug(c)}"><h2>${esc(c)}</h2>${n?`<p class="note">${esc(n)}</p>`:""}`+
+    l.map(([id,name,p])=>`<div class="item"><span class="num">${id}</span><span>${esc(name)}${cnt[id]?`<span class="q">${cnt[id]}</span>`:""}</span><span class="price">${gbp(p)}</span><button class="add" data-id="${id}" aria-label="Add ${esc(name)}">+</button></div>`).join("")+`</section>`;
+  }).join("")||`<p class="empty">Nothing matches that.</p>`;
+}
+const lineP=o=>{const it=ITEMS[o.id];return (it.p+(it.t?SIDE[o.side][1]:0)+(o.big?2:0))*o.n};
+function drawOrder(){
+  $("lines").innerHTML=order.length?order.map((o,i)=>{const it=ITEMS[o.id];return `<div class="line"><div><div class="nm">${o.n}× ${esc(it.name)}</div>${it.t?`<select data-i="${i}" class="side">${SIDE.map(([s,x],k)=>`<option value="${k}"${k==o.side?" selected":""}>${s}${x?` +${gbp(x)}`:""}</option>`).join("")}</select>`:""}${it.t==2?`<label><input type="checkbox" class="big" data-i="${i}"${o.big?" checked":""}> Large +£2.00</label>`:""}</div><div><div class="price" style="text-align:right">${gbp(lineP(o))}</div><div class="qty"><button data-i="${i}" data-d="-1" aria-label="Less">−</button><button data-i="${i}" data-d="1" aria-label="More">+</button></div></div></div>`}).join(""):`<p class="empty">Tap + on anything to add it.</p>`;
+  const tot=order.reduce((s,o)=>s+lineP(o),0),n=order.reduce((s,o)=>s+o.n,0);
+  $("tot").textContent=gbp(tot);$("btot").textContent=gbp(tot);$("bcount").textContent=n+(n==1?" item":" items")+" · view order";
+  save();drawMenu();
+}
+document.addEventListener("click",e=>{
+  const a=e.target.closest(".add");
+  if(a){const id=a.dataset.id,ex=order.find(o=>o.id==id&&!o.side&&!o.big);ex?ex.n++:order.push({id,n:1,side:0,big:false});drawOrder();return}
+  const q=e.target.closest(".qty button");
+  if(q){const o=order[q.dataset.i];o.n+=+q.dataset.d;if(o.n<1)order.splice(q.dataset.i,1);drawOrder()}
+});
+document.addEventListener("change",e=>{
+  const t=e.target;if(t.classList.contains("side"))order[t.dataset.i].side=+t.value;
+  if(t.classList.contains("big"))order[t.dataset.i].big=t.checked;drawOrder();
+});
+$("q").addEventListener("input",drawMenu);
+$("clr").addEventListener("click",()=>{order=[];drawOrder()});
+drawOrder();
+}
+</script>
