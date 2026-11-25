@@ -45,6 +45,12 @@ h2{font:700 24px/1.1 Outfit,sans-serif;color:var(--red);margin:0 0 4px}
 .info{font-size:14px;color:var(--soft);margin-top:12px}
 .info b{color:var(--ink);font-size:18px;white-space:nowrap}
 .clear{margin-top:10px;background:none;border:1px solid var(--line);color:var(--soft);border-radius:8px;padding:8px 12px;cursor:pointer;font:14px Inter,sans-serif}
+.saveRow{display:flex;gap:8px;margin-top:16px}
+.saveRow input{flex:1;font:16px Inter,sans-serif;padding:9px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.saveRow button,.sv button{border:0;border-radius:8px;padding:9px 14px;background:var(--green);color:#fff;font:600 15px Inter,sans-serif;cursor:pointer}
+.sv{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:10px 0;border-bottom:1px dashed var(--line)}
+.sv small{display:block;color:var(--soft)}
+.sv .del{background:var(--chip);color:var(--ink)}
 .bar{position:fixed;left:0;right:0;bottom:0;background:var(--red);color:#fff;display:flex;justify-content:space-between;align-items:center;padding-block:14px calc(14px + env(safe-area-inset-bottom,0px));font:700 20px Outfit,sans-serif;z-index:9;text-decoration:none}
 </style>
 
@@ -62,6 +68,13 @@ h2{font:700 24px/1.1 Outfit,sans-serif;color:var(--red);margin:0 0 4px}
     <div class="total"><span>Total</span><span id="tot">£0.00</span></div>
     <div class="info">Ring it through on<br><b>01904 627767</b><br>Prices from the shop menu. Cash only.</div>
     <button class="clear" id="clr">Clear order</button>
+    <form id="saveForm" class="saveRow">
+      <input id="sname" type="text" placeholder="Name this order, e.g. Friday tea">
+      <button type="submit">Save</button>
+    </form>
+    <p id="smsg" class="empty"></p>
+    <h2 style="margin-top:18px">Saved orders</h2>
+    <div id="saved"></div>
   </aside>
 </div>
 <a class="bar pad" href="#order"><span id="bcount">0 items</span><span id="btot">£0.00</span></a>
@@ -121,6 +134,25 @@ document.addEventListener("change",e=>{
 });
 $("q").addEventListener("input",drawMenu);
 $("clr").addEventListener("click",()=>{order=[];drawOrder()});
+let saved=[];try{saved=JSON.parse(localStorage.getItem("csh-saved"))||[]}catch(e){}
+const total=o=>o.reduce((s,x)=>s+(ITEMS[x.id]?lineP(x):0),0);
+function drawSaved(){
+  try{localStorage.setItem("csh-saved",JSON.stringify(saved))}catch(e){}
+  $("saved").innerHTML=saved.length?saved.map((s,i)=>`<div class="sv"><div><b>${esc(s.name)}</b><small>${s.items.reduce((a,x)=>a+x.n,0)} items · ${gbp(total(s.items))} · ${esc(s.date)}</small></div><button data-load="${i}">Load</button><button class="del" data-del="${i}" aria-label="Delete">✕</button></div>`).join(""):`<p class="empty">No saved orders yet.</p>`;
+}
+$("saveForm").addEventListener("submit",e=>{
+  e.preventDefault();
+  if(!order.length){$("smsg").textContent="Add something first.";return}
+  const name=$("sname").value.trim()||"Order "+(saved.length+1);
+  saved.unshift({name,date:new Date().toLocaleDateString("en-GB"),items:JSON.parse(JSON.stringify(order))});
+  $("sname").value="";$("smsg").textContent="Saved “"+name+"”.";drawSaved();
+});
+$("saved").addEventListener("click",e=>{
+  const l=e.target.dataset.load,d=e.target.dataset.del;
+  if(l!=null){order=JSON.parse(JSON.stringify(saved[l].items)).filter(x=>ITEMS[x.id]);$("smsg").textContent="Loaded “"+saved[l].name+"”.";drawOrder()}
+  if(d!=null){if(e.target.dataset.sure){saved.splice(d,1);$("smsg").textContent="";drawSaved()}else{e.target.dataset.sure=1;e.target.textContent="Sure?"}}
+});
+drawSaved();
 drawOrder();
 }
 </script>
